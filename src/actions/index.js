@@ -59,21 +59,36 @@ export const fetchResultList = () => async dispatch => {
 
 
 
-export const calculate = values => async (dispatch, getState) => {
-    const coinFrom = getState().cryptoСurrencies[values.coinFrom]
-    const coinTo = getState().cryptoСurrencies[values.coinTo]
-    const amountFrom = values.amountFrom
+export const calculate = (values, cb = () => {}, type, setResultToInput = () => {}) => async (dispatch, getState) => {
+    let coinFrom,
+        coinTo,
+        from,
+        to
+
+    if(type === 'amountTo'){
+        coinTo = getState().cryptoСurrencies[values.coinFrom]
+        coinFrom = getState().cryptoСurrencies[values.coinTo]
+        from = values.amountTo
+        to = values.amountFrom
+    }else{
+        coinFrom = getState().cryptoСurrencies[values.coinFrom]
+        coinTo = getState().cryptoСurrencies[values.coinTo]
+        from = values.amountFrom
+        to = values.amountTo
+    }
 
 
     dispatch({type: ADD_RESULT_LIST_START})
 
     try {
         const result = await convertApi(coinFrom.id, coinTo.symbol)
+        cb()
 
         dispatch({
             type: ADD_RESULT_LIST_SUCCESS,
-            payload: getResult(result.data, coinTo, values)
+            payload: getResult(result.data, coinTo, from, to, setResultToInput)
         })
+
     } catch (err) {
         console.log(err)
         dispatch({
