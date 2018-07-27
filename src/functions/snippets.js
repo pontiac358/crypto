@@ -1,16 +1,16 @@
 import * as R from 'ramda'
 
 
-export function getResult(data, coinTo, from, to, setResultToInput){
-    const amountFrom = from
+export function getResult(data, coinTo, amountFrom, amountTo, setResultToInput, noAddResultList, changeInputName){
 
     const result = data.quotes[coinTo.symbol].price * amountFrom
     const payload = {
         from: amountFrom,
-        to: result
+        to: result,
+        changeInputName
     }
 
     setResultToInput(payload)
 
-    return `${amountFrom} ${data.symbol} === ${result} ${coinTo.symbol}`
+    return !noAddResultList && `${amountFrom} ${data.symbol} === ${result} ${coinTo.symbol}`
 }

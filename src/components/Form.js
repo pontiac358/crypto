@@ -33,56 +33,69 @@ const styles = theme => ({
     },
 });
 
-const required = value => (value ? undefined : 'Required')
-
 
 class Form extends Component {
     constructor(props) {
         super(props)
     }
 
+    state = {
+        loading: false
+    }
+
+
 
     componentDidMount() {
         const values = queryString.parse(this.props.location.search)
-        this.props.change('coinFrom', parseInt(values.from))
-        this.props.change('coinTo', parseInt(values.to))
+        values.from ? this.props.change('coinFrom', parseInt(values.from)) : null
+        values.to ? this.props.change('coinTo', parseInt(values.to)) : null
     }
 
+    changeHistory = (values) => {
+        const coinFrom = this.props.cryptoСurrencies[values.coinFrom]
+        const coinTo = this.props.cryptoСurrencies[values.coinTo]
+        browserHistory.push(`?from=${coinFrom.id}&to=${coinTo.id}`);
+
+        this.setState({
+            loading: false
+        })
+    }
+
+    setResultToInput = (payload) => {
+        this.props.change(payload.changeInputName, payload.to)
+    }
+
+    calculateHandle = (values, type, noAddResultList) => {
+        this.setState({
+            loading: true
+        })
+        this.props.calculate(
+            values,
+            () => this.changeHistory(values),
+            type,
+            (payload) => this.setResultToInput(payload, type, values),
+            noAddResultList
+        )
+    }
+
+
+    submitForm = type => debounce(() => {
+        setTimeout(this.props.handleSubmit(params => this.calculateHandle(params, type, true)))
+    }, 300)
+
     render() {
-        const { handleSubmit, cryptoСurrencies, classes, valid, calculate, change } = this.props
-
-
-        const changeHistory = (values) => {
-            const coinFrom = cryptoСurrencies[values.coinFrom]
-            const coinTo = cryptoСurrencies[values.coinTo]
-            browserHistory.push(`?from=${coinFrom.id}&to=${coinTo.id}`);
-        }
-
-        const setResultToInput = (payload, type) => {
-            type === 'amountFrom' ?
-                change('amountTo', payload.to) :
-                change('amountFrom', payload.to)
-        }
-
-        const calculateHandle = (values, type) => {
-            calculate(values, () => changeHistory(values), type, (payload) => setResultToInput(payload, type))
-        }
-
-        const submitForm = type => {
-            setTimeout(handleSubmit(params => calculateHandle(params, type)))
-        }
+        const { handleSubmit, cryptoСurrencies, classes, valid } = this.props
 
 
         return (
-            <form className={classes.root} autoComplete="off" onSubmit={ handleSubmit((params)=>calculateHandle(params, 'amountFrom')) }>
+            <form noValidate className={classes.root} autoComplete="off" onSubmit={ handleSubmit((params)=>this.calculateHandle(params, 'amountFrom')) }>
                 <FormControl className={classes.formControl}>
                     <Field
                         name="amountFrom"
                         component={ Input }
                         type="number"
                         label='From'
-                        validate={[required]}
-                        onChange={debounce(() => submitForm("amountFrom"), 300) }
+                        onChange={this.submitForm("amountFrom") }
                     />
                 </FormControl>
                 <FormControl className={classes.formControl}>
@@ -93,8 +106,7 @@ class Form extends Component {
                         inputProps={{
                             helperText:"Please select  crypto currency"
                         }}
-                        validate={[required]}
-                        onChange={debounce(() => submitForm("amountFrom"), 300) }
+                        onChange={this.submitForm("amountFrom")}
                     />
                 </FormControl>
                 <FormControl className={classes.formControl}>
@@ -103,8 +115,7 @@ class Form extends Component {
                         component={ Input }
                         type="number"
                         label='To'
-                        validate={[required]}
-                        onChange={debounce(() => submitForm("amountTo"), 300) }
+                        onChange={this.submitForm("amountTo") }
                     />
                 </FormControl>
                 <FormControl className={classes.formControl}>
@@ -116,14 +127,13 @@ class Form extends Component {
                         inputProps={{
                             helperText:"Please select  crypto currency"
                         }}
-                        validate={[required]}
-                        onChange={debounce(() => submitForm("amountTo"), 300) }
+                        onChange={this.submitForm("amountTo")}
                     />
                 </FormControl>
 
                 <FormControl className={classes.formControl}>
                     <div className="buttom__wrap">
-                        <Button type="submit" disabled={ !valid } label='Сalculate'/>
+                        <Button type="submit" disabled={ !valid } label={`${this.state.loading && valid ? 'Loading' : 'Сalculate'}`}/>
                     </div>
                 </FormControl>
             </form>
@@ -131,6 +141,25 @@ class Form extends Component {
     }
 
 }
+
+const validate = values => {
+    const errors = {}
+    if (!values.amountFrom && !values.amountTo) {
+        errors.amountFrom = 'Required'
+        errors.amountTo = 'Required'
+    }
+
+    if (!values.coinFrom) {
+        errors.coinFrom = 'Required'
+    }
+
+    if (!values.coinTo) {
+        errors.coinTo = 'Required'
+    }
+
+    return errors
+}
+
 
 const mapStateToProps = (state, ownProps) => ({
     cryptoСurrencies: state.cryptoСurrencies,
@@ -141,6 +170,7 @@ Form = reduxForm({
     // a unique name for the form
     form: 'calculate',
     enableReinitialize: true,
+    validate
 
 })(connect(mapStateToProps, { calculate })(Form))
 
